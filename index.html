@@ -112,7 +112,6 @@
       margin-left:auto;background:none;border:1px solid var(--green);
       color:var(--green);padding:6px 14px;border-radius:20px;font-weight:600;font-size:13px;cursor:pointer
     }
-    .gps-help-note{font-size:12px;color:#888;margin-top:4px;display:none}
     .modal-overlay{
       position:fixed;top:0;left:0;width:100%;height:100%;
       background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:center;justify-content:center
@@ -242,7 +241,6 @@
         <span id="gps-indicator">🟡</span><span id="gps-text">Acquiring GPS...</span>
         <span class="accuracy-badge" id="accuracy-badge" style="display:none;"></span>
         <button class="retry-gps-btn" id="retry-gps-btn" style="display:none;" onclick="retryGPS()">Retry GPS</button>
-        <div class="gps-help-note" id="gps-help-note"></div>
       </div>
       <div id="map-container"></div>
       <ul class="safe-zone-list" id="safe-zone-list"></ul>
@@ -313,7 +311,7 @@
       if(tabId==='safe-zones'&&map)setTimeout(()=>map.invalidateSize(),100);
     }
 
-    // ── Language texts (shortened) ──
+    // ── Language texts ──
     const enTexts={
       appTitle:'Flood Navigator',sos:'SOS',floodWarning:'⚠️ You are in a flood‑prone area.',
       goSafeZones:'Go to Safe Zones →',nearestLabel:'📍 Nearest Safe Zone:',viewAll:'View All →',
@@ -324,7 +322,13 @@
       safetyTipsHeading:'ℹ️ Flood Safety Tips',shareTips:'📤 Share These Tips',floodAlertsHeading:'🚨 Flood Alerts',
       alertTimestamp:'Last updated: just now',checkUpdates:'🔄 Check for Updates',navHome:'Home',
       navSafeZones:'Safe Zones',navHelplines:'Helplines',navTips:'Tips',offlineMap:'Map offline.',
-      gpsHelpNote:'GPS works automatically on this hosted page.',fetchFailed:'Unable to fetch live alert.'
+      beforeFlood:'Before a Flood',duringFlood:'During a Flood',afterFlood:'After a Flood',ifTrapped:'If Trapped',
+      tipList:{
+        before:['Prepare an emergency kit with food, water, medicine, and documents.','Know your nearest safe zone and plan your evacuation route.','Keep important documents in a waterproof bag.','Stay informed via official alerts and local radio.'],
+        during:['Move immediately to higher ground.','Never walk or drive through floodwater – just 15 cm can knock you down.','Stay away from electric poles, wires, and damaged buildings.','If water enters your home, turn off electricity at the main breaker.'],
+        after:['Do not return home until authorities declare it safe.','Watch out for displaced wildlife, especially snakes.','Boil all water before drinking; avoid contaminated food.','Check for gas leaks and structural damage before entering.'],
+        trapped:['Call 1122 immediately and give your exact location.','Move to the highest level of the building – roof if safe.','Signal rescuers with a bright cloth or flashlight at night.','Conserve phone battery; keep communication short.']
+      }
     };
     const urTexts={
       appTitle:'سیلاب نیویگیٹر',sos:'ایس او ایس',floodWarning:'⚠️ آپ سیلاب زدہ علاقے میں ہیں۔',
@@ -336,7 +340,13 @@
       safetyTipsHeading:'ℹ️ سیلاب سے بچاؤ کی ہدایات',shareTips:'📤 یہ ہدایات شیئر کریں',floodAlertsHeading:'🚨 سیلاب الرٹ',
       alertTimestamp:'آخری اپ ڈیٹ: ابھی',checkUpdates:'🔄 اپ ڈیٹس چیک کریں',navHome:'ہوم',
       navSafeZones:'محفوظ مقامات',navHelplines:'ہیلپ لائن',navTips:'ہدایات',offlineMap:'نقشہ آف لائن ہے۔',
-      gpsHelpNote:'GPS اس ہوسٹڈ پیج پر خودکار طور پر کام کرے گا۔',fetchFailed:'لائیو الرٹ حاصل کرنے میں ناکام۔'
+      beforeFlood:'سیلاب سے پہلے',duringFlood:'سیلاب کے دوران',afterFlood:'سیلاب کے بعد',ifTrapped:'اگر پھنس جائیں',
+      tipList:{
+        before:['کھانے، پانی، ادویات اور دستاویزات پر مشتمل ہنگامی کٹ تیار رکھیں۔','اپنا قریب ترین محفوظ مقام جانیں اور وہاں جانے کا راستہ طے کریں۔','اہم دستاویزات واٹر پروف بیگ میں رکھیں۔','سرکاری الرٹس اور مقامی ریڈیو سے باخبر رہیں۔'],
+        during:['فوری طور پر اونچی جگہ پر چلے جائیں۔','سیلاب کے پانی میں کبھی پیدل یا گاڑی نہ چلائیں – صرف 15 سینٹی میٹر پانی آپ کو گرا سکتا ہے۔','بجلی کے کھمبوں، تاروں اور خراب عمارتوں سے دور رہیں۔','اگر پانی گھر میں داخل ہو جائے تو مین بریکر سے بجلی بند کر دیں۔'],
+        after:['جب تک حکام محفوظ قرار نہ دیں گھر واپس نہ جائیں۔','بے گھر ہونے والے جنگلی جانوروں خصوصاً سانپوں سے ہوشیار رہیں۔','پینے سے پہلے تمام پانی ابالیں؛ آلودہ کھانے سے پرہیز کریں۔','اندر داخل ہونے سے پہلے گیس لیک اور ساختی نقصان چیک کریں۔'],
+        trapped:['فوری طور پر 1122 پر کال کریں اور اپنا درست مقام بتائیں۔','عمارت کی سب سے اونچی منزل پر جائیں – اگر چھت محفوظ ہو۔','رات کے وقت روشن کپڑے یا فلیش لائٹ سے امدادی ٹیم کو اشارہ کریں۔','فون کی بیٹری بچائیں؛ بات چیت مختصر رکھیں۔']
+      }
     };
 
     let currentLang='en';
@@ -369,7 +379,6 @@
       document.getElementById('nav-safe-zones').textContent=t.navSafeZones;
       document.getElementById('nav-helplines').textContent=t.navHelplines;
       document.getElementById('nav-tips').textContent=t.navTips;
-      document.getElementById('gps-help-note').textContent=t.gpsHelpNote;
       document.getElementById('lang-toggle').textContent=currentLang==='en'?'EN | UR':'UR | EN';
       if(window.latestCoords)updateSafeZoneList(window.latestCoords.lat,window.latestCoords.lon);
       else showFallbackList();
@@ -497,7 +506,6 @@
     function retryGPS(){attemptGPS();}
     function startGPS(){
       if(!navigator.geolocation)return;
-      document.getElementById('gps-help-note').textContent='';
       const options={enableHighAccuracy:true,maximumAge:0,timeout:15000};
       watchId=navigator.geolocation.watchPosition(
         pos=>{
@@ -507,7 +515,6 @@
           document.getElementById('accuracy-badge').style.display='inline-block';
           document.getElementById('accuracy-badge').textContent=`±${Math.round(accuracy)}m`;
           document.getElementById('retry-gps-btn').style.display='none';
-          document.getElementById('gps-help-note').style.display='none';
           updateSafeZoneList(latitude,longitude);
           window.latestCoords={lat:latitude,lon:longitude,accuracy};
           const now=Date.now();
@@ -532,21 +539,30 @@
       );
     }
 
-    // ── ALERT FETCH (works because we are on HTTPS) ──
+    // ── Alert fetch with JSON error handling ──
     const alertUrl='https://windariser.github.io/FLOOD-ALERT-PUNJAB/alert.json';
     const FALLBACK_ALERT={level:'high',message:'Chenab HIGH flood. Evacuate low-lying areas immediately.',timestamp:new Date().toISOString()};
 
-    // Show something immediately
+    // Show fallback immediately, then try live fetch
     updateAlertUI(FALLBACK_ALERT);
 
     async function fetchAlert(){
       try{
         const resp=await fetch(alertUrl,{cache:'no-cache'});
         if(!resp.ok)throw new Error('HTTP '+resp.status);
-        const data=await resp.json();
-        if(!data.message)throw new Error('Invalid JSON');
+        const text=await resp.text();
+        let data;
+        try{
+          data=JSON.parse(text);
+        }catch(jsonErr){
+          console.warn('Invalid JSON from server:',jsonErr);
+          // Try to salvage by replacing control characters
+          const cleaned=text.replace(/[\u0000-\u001F]/g,' '); // replace control chars with space
+          data=JSON.parse(cleaned);
+        }
+        if(!data.message)throw new Error('Missing message');
         updateAlertUI(data);
-        localStorage.setItem('cachedAlert',JSON.stringify(data));
+        localStorage.setItem('cachedAlert',text);
         document.getElementById('alert-banner-text').textContent='⚠️ '+data.message;
       }catch(e){
         console.warn('Fetch failed:',e);
@@ -563,7 +579,12 @@
     function testFetch(){
       fetch(alertUrl,{cache:'no-cache'})
         .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
-        .then(t=>{alert('✅ Success! Response:\n'+t.substring(0,200));updateAlertUI(JSON.parse(t));})
+        .then(t=>{
+          let data;
+          try{data=JSON.parse(t);}catch(e){data=JSON.parse(t.replace(/[\u0000-\u001F]/g,' '));}
+          alert('✅ Success! Alert: '+data.message);
+          updateAlertUI(data);
+        })
         .catch(e=>alert('❌ Error: '+e.message));
     }
 
@@ -577,12 +598,55 @@
       document.getElementById('alert-timestamp').textContent=(currentLang==='en'?'Last updated: ':'آخری اپ ڈیٹ: ')+new Date(data.timestamp).toLocaleString();
     }
 
-    // ── Accordion & Tips ──
-    function renderAccordion(){ /* … keep your existing renderAccordion … */ }
-    function toggleAccordion(idx){ /* … keep existing … */ }
-    function shareTips(){ /* … keep existing … */ }
+    // ── Safety Tips Accordion ──
+    function renderAccordion(){
+      const t=currentLang==='en'?enTexts:urTexts;
+      const categories=[
+        {key:'beforeFlood',items:'before'},
+        {key:'duringFlood',items:'during'},
+        {key:'afterFlood',items:'after'},
+        {key:'ifTrapped',items:'trapped'}
+      ];
+      const acc=document.getElementById('safety-accordion');
+      acc.innerHTML=categories.map((cat,idx)=>`
+        <div class="accordion-item">
+          <button class="accordion-header" data-index="${idx}">
+            <span>${t[cat.key]}</span>
+            <span class="accordion-icon">▼</span>
+          </button>
+          <div class="accordion-content" id="accordion-content-${idx}">
+            <ul>${t.tipList[cat.items].map(item=>`<li>${item}</li>`).join('')}</ul>
+          </div>
+        </div>
+      `).join('');
+      // Re-attach event listeners
+      document.querySelectorAll('.accordion-header').forEach(h=>{
+        h.addEventListener('click',function(){
+          const idx=this.dataset.index;
+          const content=document.getElementById('accordion-content-'+idx);
+          const icon=this.querySelector('.accordion-icon');
+          const isOpen=content.classList.contains('open');
+          document.querySelectorAll('.accordion-content').forEach(c=>c.classList.remove('open'));
+          document.querySelectorAll('.accordion-icon').forEach(i=>i.textContent='▼');
+          if(!isOpen){
+            content.classList.add('open');
+            icon.textContent='▲';
+          }
+        });
+      });
+    }
 
-    document.querySelector('.sos-button').addEventListener('click',()=>{if(window.navigator?.vibrate)navigator.vibrate([200,100,200]);});
+    function shareTips(){
+      const t=currentLang==='en'?enTexts:urTexts;
+      const allTips=Object.values(t.tipList).flat().join('\n- ');
+      const msg=`${t.safetyTipsHeading}:\n- ${allTips}\n\nStay safe! – Flood Navigator`;
+      if(navigator.share)navigator.share({title:t.safetyTipsHeading,text:msg}).catch(()=>{});
+      else alert(msg);
+    }
+
+    document.querySelector('.sos-button').addEventListener('click',()=>{
+      if(window.navigator?.vibrate)navigator.vibrate([200,100,200]);
+    });
 
     // Initialise
     renderAccordion();
