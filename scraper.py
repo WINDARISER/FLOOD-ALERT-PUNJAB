@@ -2,113 +2,64 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import datetime, timezone
-import re
 
-# List of official flood alert pages to try
-SOURCES = [
-    {
-        "name": "PDMA Punjab",
-        "url": "https://pdma.gos.pk/flood-alert/",
-        "selector": "div.alert-content, div.field--name-body, article, .flood-alert-text"  # common selectors
-    },
-    {
-        "name": "PMD Flood Forecasting",
-        "url": "http://www.pmd.gov.pk/FFD/cp/floodpage.asp",
-        "selector": "body"  # fallback whole page text
-    }
-]
+# URL of the PDMA or PMD page with the flood forecast
+URL = "https://ffd.pmd.gov.pk/"   # or the exact page you were on
 
-def extract_alert_from_page(url, selector, name):
+def fetch_alert():
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; FloodAlertBot/1.0)"}
-        response = requests.get(url, timeout=20, headers=headers)
+        response = requests.get(URL, timeout=20, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Try to find content with known selectors
-        content_div = None
-        for sel in selector.split(", "):
-            content_div = soup.select_one(sel)
-            if content_div:
-                break
+        # Find the paragraph with the flood forecast
+        alert_p = soup.find('p', class_='update-snippet')
+        if not alert_p:
+            # Fallback: try any p with font-weight-bold
+            alert_p = soup.find('p', class_='font-weight-bold')
 
-        if not content_div:
-            # Fallback: get all text from body
-            content_div = soup.body
-
-        full_text = content_div.get_text(separator=" ", strip=True) if content_div else ""
-
-        # Look for keywords like "flood warning", "high flood", "evacuate", etc.
-        keywords = ["flood warning", "high flood", "evacuate", "low-lying", "flood alert",
-                     "سیلاب", "انتباہ", "شدید سیلاب", "نشیبی", "خطرہ"]
-        found = False
         message = ""
         level = "low"
 
-        for line in full_text.split(". "):
-            line_lower = line.lower()
-            if any(kw in line_lower for kw in keywords):
-                # Determine flood level
-                if "high" in line_lower or "شدید" in line:
-                    level = "high"
-                elif "medium" in line_lower or "moderate" in line_lower:
-                    level = "medium"
-                else:
-                    level = "low"
-                # Clean up the line for message
-                message = line.strip()
-                if len(message) < 10:  # too short, maybe not the alert
-                    continue
-                found = True
-                break
-
-        if not found:
-            # If no keyword found, take the first long line that looks like an alert
-            lines = [l.strip() for l in full_text.split("\n") if len(l.strip()) > 30]
-            if lines:
-                message = lines[0]
-                level = "low"
+        if alert_p:
+            message = alert_p.get_text(strip=True)
+            # Determine level from keywords
+            msg_lower = message.lower()
+            if any(w in msg_lower for w in ['high flood', 'high', 'شدید', 'خطرناک', 'انتباہ']):
+                level = 'high'
+            elif any(w in msg_lower for w in ['medium', 'moderate', 'متوسط']):
+                level = 'medium'
             else:
-                message = f"No active alert found on {name}. Check directly."
-                level = "low"
+                level = 'low'
+        else:
+            message = "No active flood alert found on PMD website. Please check manually."
+            level = "low"
 
-        return message, level, True
+        # Clean message – remove HTML entities and trim
+        message = message.replace('🔹', '').strip()
+
+        alert_data = {
+            "level": level,
+            "message": message,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+        with open("alert.json", "w", encoding="utf-8") as f:
+            json.dump(alert_data, f, ensure_ascii=False, indent=2)
+
+        print(f"Alert updated: {level} - {message[:80]}...")
+
     except Exception as e:
-        print(f"Error scraping {name}: {e}")
-        return None, None, False
-
-def main():
-    alert_message = "No flood warning in effect. Stay alert."
-    alert_level = "low"
-    success = False
-
-    # Try each source
-    for source in SOURCES:
-        msg, lvl, ok = extract_alert_from_page(source["url"], source["selector"], source["name"])
-        if ok and msg:
-            alert_message = msg
-            alert_level = lvl
-            success = True
-            break
-
-    if not success:
-        # Fallback static message
-        alert_message = "Unable to fetch latest alert. Please visit PDMA website."
-        alert_level = "low"
-
-    # Ensure message doesn't contain HTML
-    alert_message = re.sub(r'<[^>]+>', '', alert_message)
-
-    alert_data = {
-        "level": alert_level,
-        "message": alert_message,
-        "timestamp": datetime.now(timezone.utc).isoformat()
-    }
-
-    with open("alert.json", "w", encoding="utf-8") as f:
-        json.dump(alert_data, f, ensure_ascii=False, indent=2)
-
-    print(f"Alert updated: {alert_data['level']} - {alert_data['message'][:80]}...")
+        print(f"Error fetching alert: {e}")
+        # Fallback: keep the last alert, or write a default
+        fallback = {
+            "level": "low",
+            "message": "Unable to fetch latest alert. Please visit PMD website.",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        with open("alert.json", "w", encoding="utf-8") as f:
+            json.dump(fallback, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    main()
+    fetch_alert()
