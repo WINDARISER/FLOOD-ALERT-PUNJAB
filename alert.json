@@ -1,5 +1,5 @@
 {
-  "level": "high",
-  "message": "Chenab HIGH flood. Evacuate low-lying areas immediately.",
-  "timestamp": "2026-07-26T12:00:00Z"
+  "level": "low",
+  "message": "Unable to fetch latest alert. Please visit PMD website.",
+  "timestamp": "2026-07-26T10:22:46.882829+00:00"
 }
