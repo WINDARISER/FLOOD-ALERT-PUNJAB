@@ -2,42 +2,51 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import datetime, timezone
+import sys
 
-# URL of the PDMA or PMD page with the flood forecast
-URL = "https://ffd.pmd.gov.pk/"   # or the exact page you were on
+# Primary URL – the page you saw the snippet on (likely the main PMD page)
+URL = "https://ffd.pmd.gov.pk/"
 
-def fetch_alert():
+def extract_alert():
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; FloodAlertBot/1.0)"}
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (compatible; FloodAlertBot/1.0)"}
-        response = requests.get(URL, timeout=20, headers=headers)
+        print(f"Fetching {URL}...")
+        response = requests.get(URL, timeout=25, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Find the paragraph with the flood forecast
+        # Look for the paragraph with class 'update-snippet' (or 'font-weight-bold')
         alert_p = soup.find('p', class_='update-snippet')
         if not alert_p:
-            # Fallback: try any p with font-weight-bold
             alert_p = soup.find('p', class_='font-weight-bold')
-
-        message = ""
-        level = "low"
+        if not alert_p:
+            # Try any p with dir="rtl" (right‑to‑left)
+            alert_p = soup.find('p', attrs={'dir': 'rtl'})
 
         if alert_p:
             message = alert_p.get_text(strip=True)
-            # Determine level from keywords
-            msg_lower = message.lower()
-            if any(w in msg_lower for w in ['high flood', 'high', 'شدید', 'خطرناک', 'انتباہ']):
-                level = 'high'
-            elif any(w in msg_lower for w in ['medium', 'moderate', 'متوسط']):
-                level = 'medium'
-            else:
-                level = 'low'
+            # Clean emoji
+            message = message.replace('🔹', '').strip()
         else:
-            message = "No active flood alert found on PMD website. Please check manually."
-            level = "low"
+            message = ""
 
-        # Clean message – remove HTML entities and trim
-        message = message.replace('🔹', '').strip()
+        if not message:
+            # Fallback: try to grab the iframe's parent text or any visible alert
+            body_text = soup.body.get_text(separator=' ', strip=True)
+            if 'flood' in body_text.lower() or 'سیلاب' in body_text:
+                # Take the first 200 chars
+                message = body_text[:200] + '...'
+            else:
+                message = "No active flood alert found. Please check PMD website manually."
+
+        # Determine level from keywords (English & Urdu)
+        msg_lower = message.lower()
+        if any(w in msg_lower for w in ['high flood', 'high', 'شدید', 'خطرناک', 'انتباہ']):
+            level = 'high'
+        elif any(w in msg_lower for w in ['medium', 'moderate', 'متوسط', 'درمیانہ']):
+            level = 'medium'
+        else:
+            level = 'low'
 
         alert_data = {
             "level": level,
@@ -48,11 +57,11 @@ def fetch_alert():
         with open("alert.json", "w", encoding="utf-8") as f:
             json.dump(alert_data, f, ensure_ascii=False, indent=2)
 
-        print(f"Alert updated: {level} - {message[:80]}...")
+        print(f"Success: level={level}, message={message[:100]}...")
 
     except Exception as e:
-        print(f"Error fetching alert: {e}")
-        # Fallback: keep the last alert, or write a default
+        print(f"Error: {e}", file=sys.stderr)
+        # Write a fallback so the site still works
         fallback = {
             "level": "low",
             "message": "Unable to fetch latest alert. Please visit PMD website.",
@@ -62,4 +71,4 @@ def fetch_alert():
             json.dump(fallback, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    fetch_alert()
+    extract_alert()
