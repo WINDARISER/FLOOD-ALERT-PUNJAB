@@ -1,6 +1,5 @@
 {
-  "level": "low",
-  "message": "Unable to fetch latest alert. Please visit PMD website. 
-  OVERALL THERE IS NOR ISK RELATED TO FLOOD",
-  "timestamp": "2026-07-26T09:27:38.671997+00:00"
+  "level": "high",
+  "message": "Chenab HIGH flood. Evacuate low-lying areas immediately.",
+  "timestamp": "2026-07-26T12:00:00Z"
 }
