@@ -1,0 +1,47 @@
+# Give the robot a name
+name: Update Flood Alert
+
+# WHEN should the robot run?
+on:
+  schedule:
+    - cron: '0 * * * *'   # run every hour, on the hour
+  workflow_dispatch:       # also let me run it manually with a button
+
+# WHAT should the robot do?
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest   # use a fresh, free computer from GitHub
+
+    # PERMISSIONS: allow the robot to push changes back to the repo
+    permissions:
+      contents: write
+
+    steps:
+      # Step 1: Get a copy of your repository files
+      - uses: actions/checkout@v4
+
+      # Step 2: Install Python (the language the scraper uses)
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Step 3: Install the helper tools the scraper needs
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      # Step 4: Run the scraper script
+      - name: Run scraper
+        run: python scraper.py
+
+      # Step 5: If alert.json changed, save (commit & push) the new version
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add alert.json
+          if git diff --staged --quiet; then
+            echo "No changes to alert.json"
+          else
+            git commit -m "Update flood alert [skip ci]"
+            git push
+          fi
